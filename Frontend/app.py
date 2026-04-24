@@ -367,11 +367,5 @@ elif menu == "Custom Query":
     query = st.text_area("Enter Query")
 
     if st.button("Run Query"):
-        # try:
-        #     res = requests.post(f"{BASE_URL}/query", json={"query": query})
-        #     data = res.json()
-        #     st.dataframe(data)
-        # except Exception as e:
-        #     st.error(str(e))
         data = custom_query(query)
         st.dataframe(data)
