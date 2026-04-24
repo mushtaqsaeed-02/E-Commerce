@@ -20,6 +20,20 @@ def get_data(endpoint):
     except:
         return []
 
+def get_schema():
+    res = requests.post(
+        f"{BASE_URL}/query",
+        json={
+            "query": """
+                SELECT table_name, column_name
+                FROM information_schema.columns
+                WHERE table_schema = 'public'
+                ORDER BY table_name, ordinal_position
+            """
+        }
+    )
+    return res.json()
+
 if menu == "Dashboard":
     st.header("Dashboard")
 
@@ -82,13 +96,14 @@ elif menu == "Users":
         role_id = st.number_input("Role ID", 1, 10)
 
         if st.button("Create"):
-            requests.post(f"{BASE_URL}/users", json={
+            result = requests.post(f"{BASE_URL}/users", json={
                 "full_name": name,
                 "email": email,
                 "password": password,
                 "phone": phone,
                 "role_id": role_id
             })
+            st.dataframe(result.json())
             st.success("User Added")
 
     if action == "Update":
@@ -249,6 +264,24 @@ elif menu == "Payments":
 
 elif menu == "Custom Query":
     st.header("Run Custom Query")
+    st.sidebar.write("For Tables Information:")
+
+    schema = get_schema()
+
+    tables = {}
+    for row in schema:
+        table = row["table_name"]
+        column = row["column_name"]
+
+        if table not in tables:
+            tables[table] = []
+
+        tables[table].append(column)
+
+    selected_table = st.sidebar.selectbox("Select Table", list(tables.keys()))
+
+    for columns in tables[selected_table]:
+        st.sidebar.markdown(f"- {columns}")
 
     query = st.text_area("Enter Query")
 
