@@ -20,6 +20,14 @@ def get_data(endpoint):
     except:
         return []
 
+def custom_query(user_query):
+    try:
+        res = requests.post(f"{BASE_URL}/query", json={"query": user_query})
+        data = res.json()
+        return(data)
+    except Exception as e:
+        st.error(str(e))
+
 def get_schema():
     res = requests.post(
         f"{BASE_URL}/query",
@@ -40,25 +48,25 @@ if menu == "Dashboard":
     users = get_data("users")
     products = get_data("products")
     vendors = get_data("vendors")
+    sales = custom_query("select SUM(orders.total_amount) from orders JOIN payments on payments.order_id = orders.id where payments.payment_status = 'Paid'")
     orders = get_data("orders")
 
     col1, col2, col3, col4 = st.columns(4)
     col1.metric("Users", len(users))
     col2.metric("Products", len(products))
-    col3.metric("Vendors", len(vendors))
-    col4.metric("Orders", len(orders))
+    col3.metric("Orders", len(orders))
+    col4.metric("Total Sales", f'Rs. {sales[0]["sum"]}')
 
-    st.subheader("Charts")
-
-    if users and vendors:
-        st.bar_chart({"Users": [len(users)], "Vendors": [len(vendors)]})
+    st.subheader("Products By Stock")
 
     if products:
-        cat_count = {}
+        stock_count = {}
         for p in products:
-            cid = str(p.get("category_id"))
-            cat_count[cid] = cat_count.get(cid, 0) + 1
-        st.bar_chart(cat_count)
+            p_name = str(p.get("product_name"))
+            stock_count[p_name] = p.get("stock", 0)
+        st.bar_chart(stock_count)
+
+    st.subheader("Orders Status")
 
     if orders:
         status_count = {}
@@ -70,7 +78,7 @@ if menu == "Dashboard":
 elif menu == "Users":
     st.header("Users")
 
-    action = st.selectbox("Action", ["View", "Add", "Update", "Delete"])
+    action = st.sidebar.selectbox("Action", ["View", "Add", "Update", "Delete"])
 
     if action == "View":
         users = get_data("users")
@@ -133,7 +141,7 @@ elif menu == "Users":
 elif menu == "Products":
     st.header("Products")
 
-    action = st.selectbox("Action", ["View", "Add", "Update", "Delete"])
+    action = st.sidebar.selectbox("Action", ["View", "Add", "Update", "Delete"])
 
     if action == "View":
         products = get_data("products")
@@ -169,11 +177,38 @@ elif menu == "Products":
                 "vendor_id": vendor
             })
             st.success("Product Added")
+    
+    if action == "Update":
+        pid = st.number_input("Product ID", 1, 100000)
+        name = st.text_input("Product Name")
+        desc = st.text_input("Description")
+        price = st.number_input("Price", min_value=0.0)
+        stock = st.number_input("Stock", min_value=0)
+        category_id = st.number_input("Category ID", 1, 100000)
+        vendor_id = st.number_input("Vendor ID", 1, 100000)
+
+        if st.button("Update Product"):
+            requests.put(f"{BASE_URL}/products/{pid}", json={
+                "product_name": name,
+                "description": desc,
+                "price": price,
+                "stock": stock,
+                "category_id": category_id,
+                "vendor_id": vendor_id
+            })
+            st.success("Product Updated")
+
+    if action == "Delete":
+        pid = st.number_input("Product ID", 1, 100000, key="delete_product_id")
+
+        if st.button("Delete Product"):
+            requests.delete(f"{BASE_URL}/products/{pid}")
+            st.success("Product Deleted")
 
 elif menu == "Categories":
     st.header("Categories")
 
-    action = st.selectbox("Action", ["View", "Add", "Update", "Delete"])
+    action = st.sidebar.selectbox("Action", ["View", "Add", "Update", "Delete"])
 
     if action == "View":
         data = get_data("categories")
@@ -190,10 +225,27 @@ elif menu == "Categories":
             requests.post(f"{BASE_URL}/categories", json={"category_name": name})
             st.success("Added")
 
+    if action == "Update":
+        cid = st.number_input("Category ID", 1, 100000)
+        name = st.text_input("Category Name")
+
+        if st.button("Update Category"):
+            requests.put(f"{BASE_URL}/categories/{cid}", json={
+                "category_name": name
+            })
+            st.success("Category Updated")
+
+    if action == "Delete":
+        cid = st.number_input("Category ID", 1, 100000, key="delete_category_id")
+
+        if st.button("Delete Category"):
+            requests.delete(f"{BASE_URL}/categories/{cid}")
+            st.success("Category Deleted")
+
 elif menu == "Vendors":
     st.header("Vendors")
 
-    action = st.selectbox("Action", ["View", "Add", "Update", "Delete"])
+    action = st.sidebar.selectbox("Action", ["View", "Add", "Update", "Delete"])
 
     if action == "View":
         data = get_data("vendors")
@@ -217,10 +269,32 @@ elif menu == "Vendors":
             })
             st.success("Added")
 
+    if action == "Update":
+        vid = st.number_input("Vendor ID", 1, 100000)
+        name = st.text_input("Vendor Name")
+        email = st.text_input("Email")
+        phone = st.text_input("Phone")
+
+        if st.button("Update Vendor"):
+            requests.put(f"{BASE_URL}/vendors/{vid}", json={
+                "vendor_name": name,
+                "contact_email": email,
+                "phone": phone
+            })
+            st.success("Vendor Updated")
+
+    if action == "Delete":
+        vid = st.number_input("Vendor ID", 1, 100000, key="delete_vendor_id")
+
+        if st.button("Delete Vendor"):
+            requests.delete(f"{BASE_URL}/vendors/{vid}")
+            st.success("Vendor Deleted")
+
+
 elif menu == "Reviews":
     st.header("Reviews")
 
-    action = st.selectbox("Action", ["View", "Add", "Update", "Delete"])
+    action = st.sidebar.selectbox("Action", ["View", "Delete"])
 
     if action == "View":
         data = get_data("reviews")
@@ -237,6 +311,13 @@ elif menu == "Reviews":
             filtered = [r for r in filtered if str(r.get("product_id")) == product_filter]
 
         st.dataframe(filtered)
+
+    if action == "Delete":
+        rid = st.number_input("Review ID", 1, 100000, key="delete_review_id")
+
+        if st.button("Delete Review"):
+            requests.delete(f"{BASE_URL}/reviews/{rid}")
+            st.success("Review Deleted")
 
 elif menu == "Orders":
     st.header("Orders")
@@ -264,7 +345,7 @@ elif menu == "Payments":
 
 elif menu == "Custom Query":
     st.header("Run Custom Query")
-    st.sidebar.write("For Tables Information:")
+    st.sidebar.subheader("For Tables Information:")
 
     schema = get_schema()
 
@@ -286,9 +367,11 @@ elif menu == "Custom Query":
     query = st.text_area("Enter Query")
 
     if st.button("Run Query"):
-        try:
-            res = requests.post(f"{BASE_URL}/query", json={"query": query})
-            data = res.json()
-            st.dataframe(data)
-        except Exception as e:
-            st.error(str(e))
+        # try:
+        #     res = requests.post(f"{BASE_URL}/query", json={"query": query})
+        #     data = res.json()
+        #     st.dataframe(data)
+        # except Exception as e:
+        #     st.error(str(e))
+        data = custom_query(query)
+        st.dataframe(data)

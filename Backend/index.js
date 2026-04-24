@@ -50,7 +50,7 @@ app.put('/users/:id', async (req, res) => {
 });
 
 app.delete('/users/:id', async (req, res) => {
-    await pool.query('DELETE FROM users WHERE id=$1', [id]);
+    await pool.query('DELETE FROM users WHERE id=$1', [req.params.id]);
     res.json({ message: 'Deleted' });
 });
 
