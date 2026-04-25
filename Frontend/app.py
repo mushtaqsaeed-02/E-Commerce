@@ -10,7 +10,7 @@ st.title("E-Commerce Admin Panel")
 
 menu = st.sidebar.selectbox(
     "Navigation",
-    ["Dashboard", "Users", "Products", "Categories", "Vendors", "Reviews", "Orders", "Payments", "Custom Query"]
+    ["Dashboard", "Users", "Products", "Categories", "Vendors", "Reviews", "Orders", "Payments", "Roles", "Addresses", "Cart", "Cart_Items", "Order_Items", "Custom Query"]
 )
 
 def get_data(endpoint):
@@ -340,6 +340,41 @@ elif menu == "Payments":
 
     if status_filter != "All":
         data = [p for p in data if p.get("payment_status") == status_filter]
+
+    st.dataframe(data)
+
+elif menu == "Roles":
+    st.header("Roles")
+
+    data = get_data("roles")
+
+    st.dataframe(data)
+
+elif menu == "Addresses":
+    st.header("Addresses")
+
+    data = get_data("addresses")
+
+    st.dataframe(data)
+
+elif menu == "Cart":
+    st.header("Cart")
+
+    data = get_data("cart")
+
+    st.dataframe(data)
+
+elif menu == "Cart_Items":
+    st.header("Cart-Items")
+
+    data = get_data("cart-items")
+
+    st.dataframe(data)
+
+elif menu == "Order_Items":
+    st.header("Order-Items")
+
+    data = get_data("order-items")
 
     st.dataframe(data)
 
